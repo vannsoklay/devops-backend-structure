@@ -1,0 +1,19 @@
+[package]
+name = "server"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+actix-web = "*"
+actix-service = "*"
+actix-session = { version = "*", features = ["cookie-session"] }
+mongodb = "*"  # Add MongoDB crate for MongoDB integration
+jsonwebtoken = "*"
+bcrypt = "*"
+serde = { version = "*", features = ["derive"] }
+serde_json = "*"
+dotenv = "*"
+anyhow = "*"
+futures = "*"
+chrono = "*"
+tokio = { version = "*", features = ["full"] }  # Required for asynchronous runtim
