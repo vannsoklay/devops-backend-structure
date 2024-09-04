@@ -1,9 +1,10 @@
-use crate::helps::set_session;
 use crate::jwt::create_jwt;
 use crate::models::user::{LoginRequest, RegisterRequest, User};
 use crate::repositories::user_repository;
+use crate::session::set_session;
 use actix_session::Session;
 use bcrypt::{hash, verify};
+use mongodb::bson::oid::ObjectId;
 use mongodb::results::InsertOneResult;
 use mongodb::{error::Error, Collection};
 use serde_json::Value;
@@ -19,7 +20,7 @@ pub async fn register_user_service(
     };
 
     let new_user = User {
-        id: None,
+        id: ObjectId::new(),
         username: req.username,
         hashed_password,
     };
@@ -35,8 +36,10 @@ pub async fn login_user_service(
     let user_opt = user_repository::find_user_by_username(collection, &req.username).await?;
     if let Some(user) = user_opt {
         if verify(&req.password, &user.hashed_password)? {
-            let token = create_jwt(&user.id.unwrap().to_hex(), "USER")?;
-            let _ = set_session(session,"message".to_string() ,"hello".to_string()).await;
+            let token = create_jwt(&user.id.to_hex(), "USER")?;
+
+            set_session(session.clone(),"token".to_string(), token.to_owned()).await?;
+
             Ok(serde_json::json!({
                 "access_token": token
             }))

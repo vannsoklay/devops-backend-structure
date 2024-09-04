@@ -1,5 +1,7 @@
-pub mod auth;
-pub mod logging;
+pub mod auth_middleware;
+pub mod logging_middleware;
+pub mod context;
 
-pub use auth::Authentication;
-pub use logging::Logging;
+pub use auth_middleware::Authentication;
+pub use logging_middleware::Logging;
+pub use context::*;

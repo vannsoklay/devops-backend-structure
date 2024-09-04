@@ -7,18 +7,12 @@ use actix_web::{
 };
 use futures::future::{ok, LocalBoxFuture, Ready};
 use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
-use serde::{Deserialize, Serialize};
 use std::task::{Context, Poll};
+
+use crate::{get_config, jwt::Claims};
 
 // Define the struct for the Authentication middleware
 pub struct Authentication;
-
-// JWT claims structure
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Claims {
-    pub sub: String, // Subject (usually user ID)
-    pub exp: usize,  // Expiration time (as a timestamp)
-}
 
 // Implement the Transform trait for the Authentication middleware
 impl<S, B> Transform<S, ServiceRequest> for Authentication
@@ -59,42 +53,31 @@ where
     }
 
     fn call(&self, req: ServiceRequest) -> Self::Future {
+        let secret = get_config().jwt_secret;
         let session = req.get_session();
 
-        let message = session.get::<String>("message").unwrap();
+        let token = session.get::<String>("token").unwrap();
 
-        println!("message {:?}", message);
+        if token.is_some() {
+            let validation = Validation::new(Algorithm::HS256);
+            match decode::<Claims>(
+                &token.unwrap().clone(),
+                &DecodingKey::from_secret(secret.as_ref()),
+                &validation,
+            ) {
+                Ok(token_data) => {
+                    // Insert claims into the request extensions for access in handlers
+                    req.extensions_mut().insert(token_data.claims);
 
-        // Extract the Authorization header
-        if let Some(auth_header) = req.headers().get("Authorization") {
-            if let Ok(auth_str) = auth_header.to_str() {
-                if auth_str.starts_with("Bearer ") {
-                    let token = auth_str.trim_start_matches("Bearer ").trim();
-
-                    // Decode and validate the token
-                    let validation = Validation::new(Algorithm::HS256);
-                    let secret = "my_secret_key"; // Replace with your secret key
-
-                    match decode::<Claims>(
-                        token,
-                        &DecodingKey::from_secret(secret.as_ref()),
-                        &validation,
-                    ) {
-                        Ok(token_data) => {
-                            println!("Valid token for user: {:?}", token_data.claims.sub);
-                            // Insert claims into the request extensions for access in handlers
-                            req.extensions_mut().insert(token_data.claims);
-
-                            // Call the next service in the middleware chain
-                            let fut = self.service.call(req);
-                            return Box::pin(async move {
-                                fut.await.map(|res| res.map_into_boxed_body())
-                            });
-                        }
-                        Err(err) => {
-                            println!("Token error: {:?}", err);
-                        }
-                    }
+                    // Call the next service in the middleware chain
+                    let fut = self.service.call(req);
+                    return Box::pin(async move { fut.await.map(|res| res.map_into_boxed_body()) });
+                }
+                Err(err) => {
+                    let response = HttpResponse::Unauthorized()
+                        .body(format!("Invalid {:?}", err))
+                        .map_into_boxed_body();
+                    return Box::pin(async move { Ok(req.into_response(response)) });
                 }
             }
         }

@@ -3,7 +3,7 @@ use serde::{Serialize, Deserialize};
 
 use crate::get_config;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Claims {
     pub sub: String, // User ID
     pub role: String, // User Role

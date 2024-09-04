@@ -1,6 +1,6 @@
 use actix_web::{App, HttpServer};
 use server::*;
-use helps::session_middleware;
+use session::session_middleware;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -8,7 +8,6 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .wrap(Logging)
-            .wrap(Authentication)
             .wrap(session_middleware())
             .configure(init_routes)
     })
