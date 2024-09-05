@@ -4,7 +4,6 @@ use crate::repositories::user_repository;
 use crate::session::set_session;
 use actix_session::Session;
 use bcrypt::{hash, verify};
-use mongodb::bson::oid::ObjectId;
 use mongodb::results::InsertOneResult;
 use mongodb::{error::Error, Collection};
 use serde_json::Value;
@@ -20,9 +19,9 @@ pub async fn register_user_service(
     };
 
     let new_user = User {
-        id: ObjectId::new(),
         username: req.username,
-        hashed_password,
+        password: hashed_password,
+        ..Default::default()
     };
     user_repository::create_user(collection, new_user).await
 }
@@ -31,14 +30,14 @@ pub async fn register_user_service(
 pub async fn login_user_service(
     collection: &Collection<User>,
     req: LoginRequest,
-    session: Session
+    session: Session,
 ) -> Result<Value, Box<dyn std::error::Error>> {
     let user_opt = user_repository::find_user_by_username(collection, &req.username).await?;
     if let Some(user) = user_opt {
-        if verify(&req.password, &user.hashed_password)? {
+        if verify(&req.password, &user.password)? {
             let token = create_jwt(&user.id.to_hex(), "USER")?;
 
-            set_session(session.clone(),"token".to_string(), token.to_owned()).await?;
+            set_session(session.clone(), "token".to_string(), token.to_owned()).await?;
 
             Ok(serde_json::json!({
                 "access_token": token

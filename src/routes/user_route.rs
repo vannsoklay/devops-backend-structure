@@ -15,8 +15,8 @@ async fn get_user(req: HttpRequest) -> impl Responder {
 
     let collection: Collection<User> = db.collection("users");
     match user_service::get_user_by_id_service(&collection, &claims.sub).await {
-        Ok(Some(item)) => HttpResponse::Ok().json(item),
-        Ok(None) => HttpResponse::NotFound().body("Item not found"),
+        Ok(Some(user)) => HttpResponse::Ok().json(User::to_user(user)),
+        Ok(None) => HttpResponse::NotFound().body("User not found"),
         Err(err) => HttpResponse::InternalServerError().body(err.to_string()),
     }
 }
