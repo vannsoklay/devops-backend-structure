@@ -1,4 +1,4 @@
-use crate::post::{Post, PostRequest};
+use crate::post::{Post, PostRequest, PostResponse};
 use crate::repositories::post_repository;
 use mongodb::error::Error;
 use mongodb::results::{DeleteResult, InsertOneResult, UpdateResult};
@@ -18,7 +18,7 @@ pub async fn get_post_by_id_service(
     post_repository::get_post_by_id(collection, post_id).await
 }
 
-pub async fn get_all_posts_service(collection: &Collection<Post>) -> Result<Vec<Post>, Error> {
+pub async fn get_all_posts_service(collection: &Collection<Post>) -> Result<Vec<PostResponse>, Error> {
     post_repository::get_all_posts(collection).await
 }
 

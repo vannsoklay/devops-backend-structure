@@ -1,4 +1,4 @@
-use crate::post::PostRequest;
+use crate::post::{PostRequest, PostResponse};
 use crate::{models::post::Post, post::Media};
 use futures::stream::TryStreamExt;
 use mongodb::bson::{from_bson, Bson};
@@ -31,7 +31,7 @@ pub async fn get_post_by_id(
     Ok(post)
 }
 
-pub async fn get_all_posts(collection: &Collection<Post>) -> Result<Vec<Post>, Error> {
+pub async fn get_all_posts(collection: &Collection<Post>) -> Result<Vec<PostResponse>, Error> {
     let pipeline = vec![
         doc! {
             "$lookup": {
@@ -49,26 +49,35 @@ pub async fn get_all_posts(collection: &Collection<Post>) -> Result<Vec<Post>, E
                 "_id": 1,
                 "title": 1,
                 "content": 1,
-                "id": "$user._id",
-                "username": "$user.username",
-                "email": "$user.email",
-                "avatar": "$user.avatar",
-                "bio": "$user.bio",
-                "follower_count": "$user.follower_count",
-                "following_count": "$user.following_count",
-                "is_verified": "$user.is_verified",
-                "last_login": "$user.last_login",
-                "status": "$user.status"
+                "media": 1,
+                "author": {
+                    "_id": "$user._id",
+                    "username": "$user.username",
+                    "email": "$user.email",
+                    "avatar": "$user.avatar",
+                    "bio": "$user.bio",
+                    "follower_count": "$user.follower_count",
+                    "following_count": "$user.following_count",
+                    "is_verified": "$user.is_verified",
+                    "last_login": "$user.last_login",
+                    "status": "$user.status",
+                    "created_at": "$user.created_at",
+                    "updated_at": "$user.created_at"
+                },
+                "tags": 1,
+                "likes_count": 1,
+                "comments_count": 1,
+                "created_at": 1,
+                "updated_at": 1,
+ 
             }
         },
     ];
 
     let mut cursor = collection.aggregate(pipeline).await?;
-    let mut posts: Vec<Post> = Vec::new();
+    let mut posts: Vec<PostResponse> = Vec::new();
     while let Some(doc) = cursor.try_next().await? {
-        println!("posts {:?}", doc);
-
-        let post: Post = from_bson(Bson::Document(doc))?;
+        let post: PostResponse = from_bson(Bson::Document(doc))?;
         posts.push(post);
     }
     Ok(posts)

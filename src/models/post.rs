@@ -2,10 +2,13 @@ use mongodb::bson::{
     oid::ObjectId,
     serde_helpers::{
         deserialize_bson_datetime_from_rfc3339_string, serialize_bson_datetime_as_rfc3339_string,
+        serialize_object_id_as_hex_string,
     },
     DateTime,
 };
 use serde::{Deserialize, Serialize};
+
+use super::user::UserResponse;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum MediaType {
@@ -39,6 +42,23 @@ pub struct Post {
         serialize_with = "serialize_bson_datetime_as_rfc3339_string"
     )]
     pub updated_at: DateTime,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct PostResponse {
+    #[serde(serialize_with = "serialize_object_id_as_hex_string")]
+    #[serde(rename(serialize = "id"))]
+    #[serde(rename(deserialize = "_id"))]
+    pub id: ObjectId,
+    pub content: String,
+    pub media: Vec<Media>,
+    pub author: UserResponse,
+    #[serde(rename = "tags")]
+    pub tag_ids: Vec<ObjectId>,
+    pub likes_count: i32,
+    pub comments_count: i32,
+    pub created_at: String,
+    pub updated_at: String,
 }
 
 impl Default for Post {
