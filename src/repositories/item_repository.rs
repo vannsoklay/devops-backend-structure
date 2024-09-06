@@ -1,5 +1,3 @@
-// src/repositories/item_repository.rs
-
 use crate::models::item::Item;
 use futures::stream::TryStreamExt;
 use mongodb::{
