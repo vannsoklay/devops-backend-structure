@@ -1,11 +1,13 @@
-use crate::models::post::Post;
+use crate::post::PostRequest;
+use crate::{models::post::Post, post::Media};
 use futures::stream::TryStreamExt;
+use mongodb::bson::{from_bson, Bson};
+use mongodb::{bson::oid::ObjectId, error::Error};
 use mongodb::{
-    bson::doc,
+    bson::{doc, to_document},
     results::{DeleteResult, InsertOneResult, UpdateResult},
     Collection,
 };
-use mongodb::{bson::oid::ObjectId, error::Error};
 
 pub async fn create_post(
     collection: &Collection<Post>,
@@ -30,9 +32,43 @@ pub async fn get_post_by_id(
 }
 
 pub async fn get_all_posts(collection: &Collection<Post>) -> Result<Vec<Post>, Error> {
-    let mut cursor = collection.find(doc! {}).await?;
+    let pipeline = vec![
+        doc! {
+            "$lookup": {
+                "from": "users",           // Collection to join
+                "localField": "author_id", // Field from the posts collection
+                "foreignField": "_id",     // Field from the users collection
+                "as": "user",              // Output array field
+            }
+        },
+        doc! {
+            "$unwind": "$user" // Unwind the user array to merge it into a single object
+        },
+        doc! {
+            "$project": {
+                "_id": 1,
+                "title": 1,
+                "content": 1,
+                "id": "$user._id",
+                "username": "$user.username",
+                "email": "$user.email",
+                "avatar": "$user.avatar",
+                "bio": "$user.bio",
+                "follower_count": "$user.follower_count",
+                "following_count": "$user.following_count",
+                "is_verified": "$user.is_verified",
+                "last_login": "$user.last_login",
+                "status": "$user.status"
+            }
+        },
+    ];
+
+    let mut cursor = collection.aggregate(pipeline).await?;
     let mut posts: Vec<Post> = Vec::new();
-    while let Some(post) = cursor.try_next().await? {
+    while let Some(doc) = cursor.try_next().await? {
+        println!("posts {:?}", doc);
+
+        let post: Post = from_bson(Bson::Document(doc))?;
         posts.push(post);
     }
     Ok(posts)
@@ -41,19 +77,27 @@ pub async fn get_all_posts(collection: &Collection<Post>) -> Result<Vec<Post>, E
 pub async fn update_post(
     collection: &Collection<Post>,
     post_id: &str,
-    updated_post: Post,
+    updated_post: PostRequest,
 ) -> Result<UpdateResult, Error> {
     let obj_id = match ObjectId::parse_str(post_id) {
         Ok(id) => id,
         Err(_) => return Err(Error::custom("Invalid Post ID")),
     };
 
+    let mut updated_media = vec![];
+
+    for m in updated_post.media {
+        updated_media.push(to_document(&Media {
+            url: m.url,
+            media_type: m.media_type,
+        })?)
+    }
+
     let filter = doc! { "_id": obj_id };
     let update = doc! {
         "$set": {
             "content": updated_post.content,
-            "images": updated_post.images,
-            "videos": updated_post.videos,
+            "media": updated_media,
             "tags": updated_post.tags,
         }
     };

@@ -5,7 +5,6 @@ use actix_web::{web, HttpRequest, HttpResponse, Responder};
 use mongodb::bson::oid::ObjectId;
 use mongodb::Collection;
 
-// Route configuration
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/posts")
@@ -18,8 +17,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
     );
 }
 
-// Handler to create an item
-async fn create_post(json: web::Json<PostRequest>, req: HttpRequest) -> impl Responder {
+async fn create_post(post: web::Json<PostRequest>, req: HttpRequest) -> impl Responder {
     let db = get_database().await;
     let collection: Collection<Post> = db.collection("posts");
     let claims = handler(req).await.expect("User not found");
@@ -32,10 +30,9 @@ async fn create_post(json: web::Json<PostRequest>, req: HttpRequest) -> impl Res
     let post = Post {
         id: None,
         author_id: author_id.clone(),
-        content: json.clone().content,
-        images: json.clone().images,
-        videos: json.clone().videos,
-        tags: json.clone().tags,
+        content: post.clone().content,
+        media: post.clone().media,
+        tags: post.clone().tags,
         ..Default::default()
     };
 
@@ -64,7 +61,7 @@ async fn get_post(id: web::Path<String>) -> impl Responder {
     }
 }
 
-async fn update_post(id: web::Path<String>, post: web::Json<Post>) -> impl Responder {
+async fn update_post(id: web::Path<String>, post: web::Json<PostRequest>) -> impl Responder {
     let db = get_database().await;
     let collection: Collection<Post> = db.collection("posts");
     match post_service::update_post_service(&collection, &id, post.into_inner()).await {

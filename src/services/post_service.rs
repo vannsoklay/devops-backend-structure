@@ -1,4 +1,4 @@
-use crate::post::Post;
+use crate::post::{Post, PostRequest};
 use crate::repositories::post_repository;
 use mongodb::error::Error;
 use mongodb::results::{DeleteResult, InsertOneResult, UpdateResult};
@@ -25,7 +25,7 @@ pub async fn get_all_posts_service(collection: &Collection<Post>) -> Result<Vec<
 pub async fn update_post_service(
     collection: &Collection<Post>,
     post_id: &str,
-    updated_post: Post,
+    updated_post: PostRequest,
 ) -> Result<UpdateResult, Error> {
     post_repository::update_post(collection, post_id, updated_post).await
 }
