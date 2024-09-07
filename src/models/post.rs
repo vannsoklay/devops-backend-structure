@@ -1,14 +1,16 @@
+use super::{tag::TagResponse, user::UserResponse};
+use crate::utils::helps::{
+    deserialize_string_vec_as_object_id_vec, serialize_object_id_vec_as_string_vec,
+};
 use mongodb::bson::{
     oid::ObjectId,
     serde_helpers::{
         deserialize_bson_datetime_from_rfc3339_string, serialize_bson_datetime_as_rfc3339_string,
-        serialize_object_id_as_hex_string
+        serialize_object_id_as_hex_string,
     },
     DateTime,
 };
 use serde::{Deserialize, Serialize};
-use crate::utils::helps::{deserialize_string_vec_as_object_id_vec, serialize_object_id_vec_as_string_vec};
-use super::{tag::TagResponse, user::UserResponse};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum MediaType {
@@ -23,6 +25,13 @@ pub struct Media {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "lowercase")]
+pub enum PostType {
+    Single,
+    Multiple,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Post {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
@@ -33,6 +42,8 @@ pub struct Post {
     pub tag_ids: Vec<ObjectId>,
     pub likes_count: i32,
     pub comments_count: i32,
+    #[serde(rename = "type")]
+    pub post_type: PostType,
     #[serde(
         deserialize_with = "deserialize_bson_datetime_from_rfc3339_string",
         serialize_with = "serialize_bson_datetime_as_rfc3339_string"
@@ -57,6 +68,8 @@ pub struct PostResponse {
     pub tags: Option<Vec<TagResponse>>,
     pub likes_count: i32,
     pub comments_count: i32,
+    #[serde(rename = "type")]
+    pub post_type: PostType,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -69,6 +82,7 @@ impl Default for Post {
             content: String::new(),
             media: Vec::new(),
             tag_ids: Vec::new(),
+            post_type: PostType::Single,
             likes_count: 0,
             comments_count: 0,
             created_at: DateTime::now(),

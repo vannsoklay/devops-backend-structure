@@ -1,5 +1,5 @@
 use crate::database::mongodb::get_database;
-use crate::post::{Post, PostRequest};
+use crate::post::{Media, Post, PostRequest, PostType};
 use crate::{handler, post_service, Authentication};
 use actix_web::{web, HttpRequest, HttpResponse, Responder};
 use mongodb::bson::oid::ObjectId;
@@ -17,6 +17,13 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
     );
 }
 
+fn determine_post_type(media: &Option<Vec<Media>>) -> PostType {
+    match media {
+        Some(media_list) if media_list.len() > 1 => PostType::Multiple,
+        Some(_) | None => PostType::Single,
+    }
+}
+
 async fn create_post(post: web::Json<PostRequest>, req: HttpRequest) -> impl Responder {
     let db = get_database().await;
     let collection: Collection<Post> = db.collection("posts");
@@ -26,13 +33,15 @@ async fn create_post(post: web::Json<PostRequest>, req: HttpRequest) -> impl Res
         Ok(id) => id,
         Err(_) => return HttpResponse::InternalServerError().body("Invalid author_id"),
     };
-
+    
+    let post_type = determine_post_type(&Some(post.clone().media));
     let post = Post {
         id: None,
         author_id: author_id.clone(),
         content: post.clone().content,
         media: post.clone().media,
         tag_ids: post.clone().tags,
+        post_type: post_type,
         ..Default::default()
     };
 

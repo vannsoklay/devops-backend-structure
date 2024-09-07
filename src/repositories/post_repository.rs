@@ -86,6 +86,7 @@ pub async fn get_post_by_id(
                         }
                     }
                 },
+                "type": 1,
                 "likes_count": 1,
                 "comments_count": 1,
                 "created_at": 1,
@@ -157,6 +158,7 @@ pub async fn get_all_posts(collection: &Collection<Post>) -> Result<Vec<PostResp
                         }
                     }
                 },
+                "type": 1,
                 "likes_count": 1,
                 "comments_count": 1,
                 "created_at": 1,

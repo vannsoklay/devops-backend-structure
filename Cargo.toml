@@ -5,10 +5,14 @@ edition = "2021"
 
 [dependencies]
 actix-web = "*"
+actix-cors = "*"
+actix-multipart = "*"
+actix-files = "*"
 actix-service = "*"
 actix-session = { version = "*", features = ["cookie-session"] }
 mongodb = "*"  # Add MongoDB crate for MongoDB integration
 jsonwebtoken = "*"
+futures-util = "*"
 bcrypt = "*"
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"
