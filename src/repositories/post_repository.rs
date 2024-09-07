@@ -45,6 +45,14 @@ pub async fn get_all_posts(collection: &Collection<Post>) -> Result<Vec<PostResp
             "$unwind": "$user" // Unwind the user array to merge it into a single object
         },
         doc! {
+            "$lookup": {
+                "from": "tags",
+                "localField": "tags",
+                "foreignField": "_id",
+                "as": "tag_details",
+            }
+        },
+        doc! {
             "$project": {
                 "_id": 1,
                 "title": 1,
@@ -64,13 +72,28 @@ pub async fn get_all_posts(collection: &Collection<Post>) -> Result<Vec<PostResp
                     "created_at": "$user.created_at",
                     "updated_at": "$user.created_at"
                 },
-                "tags": 1,
+                "tags": {
+                    "$map": {
+                        "input": "$tag_details",
+                        "as": "tag",
+                        "in": {
+                            "_id": "$$tag._id",
+                            "name": "$$tag.name"
+                        }
+                    }
+                },
                 "likes_count": 1,
                 "comments_count": 1,
                 "created_at": 1,
                 "updated_at": 1,
- 
             }
+        },
+        // Pagination: Sort by creation date and limit results
+        doc! {
+            "$sort": { "created_at": -1 } // Sort by creation date descending
+        },
+        doc! {
+            "$limit": 10 // Limit to 10 documents per page
         },
     ];
 

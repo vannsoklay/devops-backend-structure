@@ -2,13 +2,13 @@ use mongodb::bson::{
     oid::ObjectId,
     serde_helpers::{
         deserialize_bson_datetime_from_rfc3339_string, serialize_bson_datetime_as_rfc3339_string,
-        serialize_object_id_as_hex_string,
+        serialize_object_id_as_hex_string
     },
     DateTime,
 };
 use serde::{Deserialize, Serialize};
-
-use super::user::UserResponse;
+use crate::utils::helps::{deserialize_string_vec_as_object_id_vec, serialize_object_id_vec_as_string_vec};
+use super::{tag::TagResponse, user::UserResponse};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum MediaType {
@@ -29,7 +29,8 @@ pub struct Post {
     pub author_id: ObjectId,
     pub content: String,
     pub media: Vec<Media>,
-    pub tags: Vec<String>,
+    #[serde(rename = "tags")]
+    pub tag_ids: Vec<ObjectId>,
     pub likes_count: i32,
     pub comments_count: i32,
     #[serde(
@@ -51,10 +52,9 @@ pub struct PostResponse {
     #[serde(rename(deserialize = "_id"))]
     pub id: ObjectId,
     pub content: String,
-    pub media: Vec<Media>,
-    pub author: UserResponse,
-    #[serde(rename = "tags")]
-    pub tag_ids: Vec<ObjectId>,
+    pub media: Option<Vec<Media>>,
+    pub author: Option<UserResponse>,
+    pub tags: Option<Vec<TagResponse>>,
     pub likes_count: i32,
     pub comments_count: i32,
     pub created_at: String,
@@ -68,7 +68,7 @@ impl Default for Post {
             author_id: ObjectId::new(),
             content: String::new(),
             media: Vec::new(),
-            tags: Vec::new(),
+            tag_ids: Vec::new(),
             likes_count: 0,
             comments_count: 0,
             created_at: DateTime::now(),
@@ -81,5 +81,9 @@ impl Default for Post {
 pub struct PostRequest {
     pub content: String,
     pub media: Vec<Media>,
-    pub tags: Vec<String>,
+    #[serde(
+        serialize_with = "serialize_object_id_vec_as_string_vec",
+        deserialize_with = "deserialize_string_vec_as_object_id_vec"
+    )]
+    pub tags: Vec<ObjectId>,
 }

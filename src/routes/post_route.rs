@@ -32,7 +32,7 @@ async fn create_post(post: web::Json<PostRequest>, req: HttpRequest) -> impl Res
         author_id: author_id.clone(),
         content: post.clone().content,
         media: post.clone().media,
-        tags: post.clone().tags,
+        tag_ids: post.clone().tags,
         ..Default::default()
     };
 
