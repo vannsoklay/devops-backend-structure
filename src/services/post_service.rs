@@ -14,7 +14,7 @@ pub async fn create_post_service(
 pub async fn get_post_by_id_service(
     collection: &Collection<Post>,
     post_id: &str,
-) -> Result<Option<Post>, Error> {
+) -> Result<Option<PostResponse>, Error> {
     post_repository::get_post_by_id(collection, post_id).await
 }
 

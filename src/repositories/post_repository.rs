@@ -1,6 +1,7 @@
 use crate::post::{PostRequest, PostResponse};
 use crate::{models::post::Post, post::Media};
 use futures::stream::TryStreamExt;
+use futures::StreamExt;
 use mongodb::bson::{from_bson, Bson};
 use mongodb::{bson::oid::ObjectId, error::Error};
 use mongodb::{
@@ -20,15 +21,89 @@ pub async fn create_post(
 pub async fn get_post_by_id(
     collection: &Collection<Post>,
     post_id: &str,
-) -> Result<Option<Post>, Error> {
+) -> Result<Option<PostResponse>, Error> {
     let obj_id = match ObjectId::parse_str(post_id) {
         Ok(id) => id,
         Err(_) => return Err(Error::custom("Invalid Post ID")),
     };
 
-    let filter = doc! { "_id": obj_id };
-    let post = collection.find_one(filter).await?;
-    Ok(post)
+    let pipeline = vec![
+        // Step 1: Match the specific post by its ID
+        doc! {
+            "$match": { "_id": obj_id }
+        },
+        // Step 2: Lookup user details from the users collection
+        doc! {
+            "$lookup": {
+                "from": "users",                // Collection to join
+                "localField": "author_id",      // Field from the posts collection
+                "foreignField": "_id",          // Field from the users collection
+                "as": "user"                    // Output array field
+            }
+        },
+        // Step 3: Unwind to merge user details into the document
+        doc! {
+            "$unwind": "$user"
+        },
+        // Step 4: Lookup tags details from the tags collection
+        doc! {
+            "$lookup": {
+                "from": "tags",                 // Collection to join
+                "localField": "tags",           // Field from the posts collection
+                "foreignField": "_id",          // Field from the tags collection
+                "as": "tag_details"             // Output array field
+            }
+        },
+        // Step 5: Project to format the output document
+        doc! {
+            "$project": {
+                "_id": 1,
+                "title": 1,
+                "content": 1,
+                "media": 1,
+                "author": {
+                    "_id": "$user._id",
+                    "username": "$user.username",
+                    "email": "$user.email",
+                    "avatar": "$user.avatar",
+                    "bio": "$user.bio",
+                    "follower_count": "$user.follower_count",
+                    "following_count": "$user.following_count",
+                    "is_verified": "$user.is_verified",
+                    "last_login": "$user.last_login",
+                    "status": "$user.status",
+                    "created_at": "$user.created_at",
+                    "updated_at": "$user.updated_at"
+                },
+                // Mapping tags to have only the necessary fields
+                "tags": {
+                    "$map": {
+                        "input": "$tag_details",
+                        "as": "tag",
+                        "in": {
+                            "_id": "$$tag._id",
+                            "name": "$$tag.name"
+                        }
+                    }
+                },
+                "likes_count": 1,
+                "comments_count": 1,
+                "created_at": 1,
+                "updated_at": 1,
+            }
+        },
+        // Optional: Limit the result to 1, though $match ensures only one document
+        doc! {
+            "$limit": 1
+        },
+    ];
+
+    let mut cursor = collection.aggregate(pipeline).await?;
+    if let Some(doc) = cursor.next().await {
+        let post: PostResponse = from_bson(Bson::Document(doc?))?;
+        return Ok(Some(post));
+    }
+    Ok(None)
 }
 
 pub async fn get_all_posts(collection: &Collection<Post>) -> Result<Vec<PostResponse>, Error> {
