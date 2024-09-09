@@ -26,7 +26,10 @@ pub async fn get_post_by_id(
         Ok(id) => id,
         Err(_) => return Err(Error::custom("Invalid Post ID")),
     };
-
+    
+    // let filter = doc! { "_id": obj_id };
+    // let post = collection.find_one(filter).await?;
+    // Ok(Post::to_post(post).await)
     let pipeline = vec![
         // Step 1: Match the specific post by its ID
         doc! {

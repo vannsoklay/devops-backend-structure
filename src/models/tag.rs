@@ -40,6 +40,15 @@ impl Default for Tag {
     }
 }
 
+impl Tag {
+    pub fn to_tag(tag: Tag) -> TagResponse {
+        TagResponse {
+            _id: tag.clone().id.unwrap(),
+            name: tag.clone().name,
+        }
+    }
+}
+
 #[derive(Debug , Deserialize, Serialize)]
 pub struct TagRequest {
     pub name: String,
